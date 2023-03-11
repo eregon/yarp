@@ -53,9 +53,12 @@ source_file_load(source_t *source, VALUE filepath) {
 // Load the contents and size of the given string into the given source_t.
 void
 source_string_load(source_t *source, VALUE string) {
+  char* copy = malloc(RSTRING_LEN(string));
+  memcpy(copy, RSTRING_PTR(string), RSTRING_LEN(string));
+
   *source = (source_t) {
     .type = SOURCE_STRING,
-    .source = RSTRING_PTR(string),
+    .source = copy,
     .size = RSTRING_LEN(string),
   };
 }

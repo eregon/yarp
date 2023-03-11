@@ -3969,6 +3969,7 @@ match_any_type_p(yp_parser_t *parser, size_t count, ...) {
 // includes any kind of comments or invalid tokens.
 static void
 parser_lex(yp_parser_t *parser) {
+  printf("parser_lex() parser->current.end=%p parser->end=%p\n", parser->current.end, parser->end);
   assert(parser->current.end <= parser->end);
 
   bool previous_command_start = parser->command_start;
