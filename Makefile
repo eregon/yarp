@@ -4,7 +4,8 @@ else
 SOEXT := so
 endif
 
-CFLAGS := -O3
+OPTFLAGS :=
+CFLAGS :=
 
 # Check for the presence of strncasecmp
 ifeq ($(shell $(CC) -Iinclude -o /dev/null test/availability/strncasecmp.c 2>/dev/null && echo 1), 1)
@@ -19,7 +20,7 @@ endif
 all: build/librubyparser.$(SOEXT)
 
 build/librubyparser.$(SOEXT): $(shell find src -name '*.c') $(shell find src -name '*.h') Makefile build include/yarp/ast.h
-	$(CC) $(CFLAGS) $(DEBUG_FLAGS) -std=c99 -Wall -Werror -Wextra -Wpedantic -Wsign-conversion -fPIC -g -fvisibility=hidden -shared -Iinclude -o $@ $(shell find src -name '*.c')
+	$(CC) $(OPTFLAGS) $(DEBUG_FLAGS) $(CFLAGS) -std=c99 -Wall -Werror -Wextra -Wpedantic -Wsign-conversion -fPIC -g -fvisibility=hidden -shared -Iinclude -o $@ $(shell find src -name '*.c')
 
 build:
 	mkdir -p build
@@ -39,4 +40,5 @@ clean:
 .PHONY: clean
 
 all-no-debug: DEBUG_FLAGS := -DNDEBUG=1
+all-no-debug: OPTFLAGS := -O3
 all-no-debug: all
