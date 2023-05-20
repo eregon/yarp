@@ -47,13 +47,6 @@ yp_buffer_append_u8(yp_buffer_t *buffer, uint8_t value) {
   yp_buffer_append(buffer, source, sizeof(uint8_t));
 }
 
-// Append a 16-bit unsigned integer to the buffer.
-void
-yp_buffer_append_u16(yp_buffer_t *buffer, uint16_t value) {
-  const void *source = &value;
-  yp_buffer_append(buffer, source, sizeof(uint16_t));
-}
-
 // Append a 32-bit unsigned integer to the buffer.
 void
 yp_buffer_append_u32(yp_buffer_t *buffer, uint32_t value) {
@@ -67,20 +60,6 @@ yp_buffer_append_u32(yp_buffer_t *buffer, uint32_t value) {
     }
     yp_buffer_append_u8(buffer, (uint8_t) n);
   }
-}
-
-// Append a 64-bit unsigned integer to the buffer.
-void
-yp_buffer_append_u64(yp_buffer_t *buffer, uint64_t value) {
-  const void *source = &value;
-  yp_buffer_append(buffer, source, sizeof(uint64_t));
-}
-
-// Append an integer to the buffer.
-void
-yp_buffer_append_int(yp_buffer_t *buffer, int value) {
-  const void *source = &value;
-  yp_buffer_append(buffer, source, sizeof(int));
 }
 
 // Free the memory associated with the buffer.
