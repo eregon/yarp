@@ -6,6 +6,8 @@
 
 #define YP_TAB_WHITESPACE_SIZE 8
 
+#define YP_NOT_FOUND ((uint32_t) -1)
+
 const char *
 yp_version(void) {
   return YP_VERSION_MACRO;
@@ -2056,7 +2058,7 @@ yp_lambda_node_create(
 
 // Allocate a new LocalVariableReadNode node.
 static yp_local_variable_read_node_t *
-yp_local_variable_read_node_create(yp_parser_t *parser, const yp_token_t *name, int depth) {
+yp_local_variable_read_node_create(yp_parser_t *parser, const yp_token_t *name, uint32_t depth) {
   yp_local_variable_read_node_t *node = yp_alloc(parser, sizeof(yp_local_variable_read_node_t));
 
   *node = (yp_local_variable_read_node_t) {
@@ -2072,7 +2074,7 @@ yp_local_variable_read_node_create(yp_parser_t *parser, const yp_token_t *name, 
 
 // Allocate and initialize a new LocalVariableWriteNode node.
 static yp_local_variable_write_node_t *
-yp_local_variable_write_node_create(yp_parser_t *parser, const yp_location_t *name_loc, yp_node_t *value, const yp_token_t *operator, int depth) {
+yp_local_variable_write_node_create(yp_parser_t *parser, const yp_location_t *name_loc, yp_node_t *value, const yp_token_t *operator, uint32_t depth) {
   yp_local_variable_write_node_t *node = yp_alloc(parser, sizeof(yp_local_variable_write_node_t));
 
   *node = (yp_local_variable_write_node_t) {
@@ -3385,10 +3387,10 @@ yp_parser_scope_push(yp_parser_t *parser, const yp_token_t *token, bool top) {
 }
 
 // Check if the current scope has a given local variables.
-static int
+static uint32_t
 yp_parser_local_depth(yp_parser_t *parser, yp_token_t *token) {
   yp_scope_t *scope = parser->current_scope;
-  int depth = 0;
+  uint32_t depth = 0;
 
   while (scope != NULL) {
     if (yp_token_list_includes(&scope->node->locals, token)) return depth;
@@ -3398,7 +3400,7 @@ yp_parser_local_depth(yp_parser_t *parser, yp_token_t *token) {
     depth++;
   }
 
-  return -1;
+  return YP_NOT_FOUND;
 }
 
 // Add a local variable to the current scope.
@@ -5985,7 +5987,7 @@ parser_lex(yp_parser_t *parser) {
           if (
             !(last_state & (YP_LEX_STATE_DOT | YP_LEX_STATE_FNAME)) &&
             (type == YP_TOKEN_IDENTIFIER) &&
-            (yp_parser_local_depth(parser, &parser->current) != -1)
+            (yp_parser_local_depth(parser, &parser->current) != YP_NOT_FOUND)
           ) {
             lex_state_set(parser, YP_LEX_STATE_END | YP_LEX_STATE_LABEL);
           }
@@ -6918,7 +6920,7 @@ parse_target(yp_parser_t *parser, yp_node_t *target, yp_token_t *operator, yp_no
     }
     case YP_NODE_LOCAL_VARIABLE_READ_NODE: {
       yp_location_t name_loc = target->location;
-      int depth = ((yp_local_variable_read_node_t *) target)->depth;
+      uint32_t depth = ((yp_local_variable_read_node_t *) target)->depth;
       yp_node_destroy(parser, target);
 
       return (yp_node_t *) yp_local_variable_write_node_create(parser, &name_loc, value, operator, depth);
@@ -7269,7 +7271,7 @@ parse_assocs(yp_parser_t *parser, yp_hash_node_t *node) {
 
         if (token_begins_expression_p(parser->current.type)) {
           value = parse_expression(parser, YP_BINDING_POWER_DEFINED, "Expected an expression after ** in hash.");
-        } else if (yp_parser_local_depth(parser, &operator) == -1) {
+        } else if (yp_parser_local_depth(parser, &operator) == YP_NOT_FOUND) {
           yp_diagnostic_list_append(&parser->error_list, operator.start, operator.end, "Expected an expression after ** in hash.");
         }
 
@@ -7376,7 +7378,7 @@ parse_arguments(yp_parser_t *parser, yp_arguments_node_t *arguments, bool accept
 
         if (token_begins_expression_p(parser->current.type)) {
           expression = parse_expression(parser, YP_BINDING_POWER_DEFINED, "Expected to be able to parse an argument.");
-        } else if (yp_parser_local_depth(parser, &operator) == -1) {
+        } else if (yp_parser_local_depth(parser, &operator) == YP_NOT_FOUND) {
           yp_diagnostic_list_append(&parser->error_list, operator.start, operator.end, "unexpected & when parent method is not forwarding.");
         }
 
@@ -7389,7 +7391,7 @@ parse_arguments(yp_parser_t *parser, yp_arguments_node_t *arguments, bool accept
         yp_token_t operator = parser->previous;
 
         if (match_any_type_p(parser, 2, YP_TOKEN_PARENTHESIS_RIGHT, YP_TOKEN_COMMA)) {
-          if (yp_parser_local_depth(parser, &parser->previous) == -1) {
+          if (yp_parser_local_depth(parser, &parser->previous) == YP_NOT_FOUND) {
             yp_diagnostic_list_append(&parser->error_list, operator.start, operator.end, "unexpected * when parent method is not forwarding.");
           }
 
@@ -7417,7 +7419,7 @@ parse_arguments(yp_parser_t *parser, yp_arguments_node_t *arguments, bool accept
             yp_node_t *right = parse_expression(parser, YP_BINDING_POWER_RANGE, "Expected a value after the operator.");
             argument = (yp_node_t *) yp_range_node_create(parser, NULL, &operator, right);
           } else {
-            if (yp_parser_local_depth(parser, &parser->previous) == -1) {
+            if (yp_parser_local_depth(parser, &parser->previous) == YP_NOT_FOUND) {
               yp_diagnostic_list_append(&parser->error_list, parser->previous.start, parser->previous.end, "unexpected ... when parent method is not forwarding.");
             }
 
@@ -8510,13 +8512,13 @@ parse_alias_argument(yp_parser_t *parser, bool first) {
 // Parse an identifier into either a local variable read or a call.
 static yp_node_t *
 parse_vcall(yp_parser_t *parser) {
-  int depth;
+  uint32_t depth;
 
   if (
     (parser->current.type != YP_TOKEN_PARENTHESIS_LEFT) &&
     (parser->previous.end[-1] != '!') &&
     (parser->previous.end[-1] != '?') &&
-    (depth = yp_parser_local_depth(parser, &parser->previous)) != -1
+    (depth = yp_parser_local_depth(parser, &parser->previous)) != YP_NOT_FOUND
   ) {
     return (yp_node_t *) yp_local_variable_read_node_create(parser, &parser->previous, depth);
   }
