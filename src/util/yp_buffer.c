@@ -57,12 +57,16 @@ yp_buffer_append_u16(yp_buffer_t *buffer, uint16_t value) {
 // Append a 32-bit unsigned integer to the buffer.
 void
 yp_buffer_append_u32(yp_buffer_t *buffer, uint32_t value) {
-  if (value < (1 << 15)) {
+  if (value < 64) {
+    yp_buffer_append_u8(buffer, (uint8_t) value);
+  } else if (value < (1 << 14)) {
+    yp_buffer_append_u16(buffer, (uint16_t) value);
+  } else if (value < (1 << 22)) {
+    yp_buffer_append_u8(buffer, (uint8_t) value);
     yp_buffer_append_u16(buffer, (uint16_t) value);
   } else {
-    assert(value < (uint32_t) (1 << 31));
-    uint32_t v = value | (uint32_t) (1 << 31);
-    const void *source = &v;
+    yp_buffer_append_u8(buffer, (uint8_t) value);
+    const void *source = &value;
     yp_buffer_append(buffer, source, sizeof(uint32_t));
   }
 }
