@@ -17,6 +17,7 @@ module YARP
         @encoding = Encoding::UTF_8
         @source = source.dup.force_encoding(@encoding).freeze
         @io = io
+        @io_buffer = IO::Buffer.for(io.string)
       end
 
       def load
@@ -28,17 +29,10 @@ module YARP
       private
 
       def load_integer
-        n = io.getbyte
-        if n < 128
-          n
-        else
-          n -= 128
-          shift = 0
-          while (b = io.getbyte) >= 128
-            n += (b - 128) << (shift += 7)
-          end
-          n + (b << (shift + 7))
-        end
+        pos = @io.pos
+        v = @io_buffer.get_value(:u32, pos)
+        @io.pos = pos + 4
+        v
       end
 
       def load_serialized_length
