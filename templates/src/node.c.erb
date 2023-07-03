@@ -21,7 +21,7 @@ yp_location_list_append(yp_location_list_t *list, const yp_token_t *token) {
         list->capacity = list->capacity == 0 ? 2 : list->capacity * 2;
         list->locations = (yp_location_t *) realloc(list->locations, sizeof(yp_location_t) * list->capacity);
     }
-    list->locations[list->size++] = (yp_location_t) { .start = token->start, .end = token->end };
+    list->locations[list->size++] = YP_LOCATION_FROM_START_END(token->start, token->end);
 }
 
 // Free the memory associated with the token list.

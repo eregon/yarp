@@ -30,4 +30,16 @@ YP_EXPORTED_FUNCTION void yp_node_memsize(yp_node_t *node, yp_memsize_t *memsize
 #define YP_EMPTY_NODE_LIST ((yp_node_list_t) { .nodes = NULL, .size = 0, .capacity = 0 })
 #define YP_EMPTY_LOCATION_LIST ((yp_location_list_t) { .locations = NULL, .size = 0, .capacity = 0 })
 
+#define YP_LOCATION_FROM_START_END(start_pointer, end_pointer) (yp_location_t) { .start = (start_pointer), .length = ((end_pointer) - (start_pointer)) }
+#define YP_LOCATION_END(location) ((location).start + (location).length)
+#define YP_LOCATION_SET_END(location, end) ((location).length = (end) - (location).start)
+#define YP_TOKEN_LENGTH(token) ((token)->end - (token)->start)
+#define YP_LENGTH(start_end) ((uint32_t) (start_end.end - start_end.start))
+// #define YP_LOCATION_TOKEN_VALUE(token) YP_LOCATION_FROM_START_END((token)->start, (token)->end)
+
+// YP_LOCATION_TOKEN_VALUE(&opening);
+// YP_LOCATION_TOKEN_VALUE(&closing);
+// YP_LOCATION_FROM_START_END(start, end),
+// #define YP_LOCATION_NULL_VALUE(parser) ((yp_location_t) { .start = parser->start, .length = 0 })
+
 #endif // YARP_NODE_H
