@@ -201,6 +201,7 @@ def template(name, locals)
   /* if you are looking to modify the                                           */
   /* template                                                                   */
   /******************************************************************************/
+  #line 1 #{filepath.inspect}
   HEADING
 
   ruby_heading = <<~HEADING
