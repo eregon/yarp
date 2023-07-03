@@ -453,7 +453,7 @@ not_provided(yp_parser_t *parser) {
 
 #define YP_EMPTY_STRING ((yp_string_t) { .type = YP_STRING_SHARED, .as.shared.start = NULL, .as.shared.end = NULL })
 #define YP_LOCATION_NULL_VALUE(parser) ((yp_location_t) { .start = parser->start, .length = 0 })
-#define YP_LOCATION_TOKEN_VALUE(token) YP_LOCATION_FROM_START_END((token)->start, (token)->end)
+#define YP_LOCATION_TOKEN_VALUE(token) YP_LOCATION_FROM_START_END2((token)->start, (token)->end)
 #define YP_LOCATION_NODE_VALUE(node) ((yp_location_t) { .start = (node)->location.start, .length = (node)->location.length })
 #define YP_LOCATION_NODE_BASE_VALUE(node) ((yp_location_t) { .start = (node)->base.location.start, .length = (node)->base.location.length })
 #define YP_OPTIONAL_LOCATION_NOT_PROVIDED_VALUE ((yp_location_t) { .start = NULL, .length = 0 })
