@@ -2,6 +2,10 @@
 
 require "mkmf"
 
+CONFIG['CC'] = "clang"
+append_cflags '-O1 -g -fsanitize=address -fno-omit-frame-pointer'
+append_ldflags '-fsanitize=address'
+
 module Yarp
   module ExtConf
     class << self
