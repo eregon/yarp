@@ -468,8 +468,9 @@ parse(int argc, VALUE *argv, VALUE self) {
     input_load_string(&input, string);
 
 #ifdef YARP_DEBUG_MODE_BUILD
-    char* dup = malloc(input.size);
+    char* dup = malloc(input.size + 1);
     memcpy(dup, input.source, input.size);
+    dup[input.size] = 'a';
     input.source = dup;
 #endif
 
