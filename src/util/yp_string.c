@@ -46,6 +46,17 @@ yp_string_constant_init(yp_string_t *string, const char *source, size_t length) 
     };
 }
 
+static void
+yp_string_mapped_init_internal(yp_string_t *string, char *source, size_t length) {
+    *string = (yp_string_t) {
+        .type = YP_STRING_MAPPED,
+        .as.mapped = {
+            .source = source,
+            .length = length
+        }
+    };
+}
+
 // Returns the memory size associated with the string.
 size_t
 yp_string_memsize(const yp_string_t *string) {
@@ -94,10 +105,20 @@ YP_EXPORTED_FUNCTION void
 yp_string_free(yp_string_t *string) {
     if (string->type == YP_STRING_OWNED) {
         free(string->as.owned.source);
+    } else if (string->type == YP_STRING_MAPPED && string->as.mapped.length) {
+        void *memory = (void *) string->as.mapped.source;
+        #if defined(_WIN32)
+        UnmapViewOfFile(memory);
+        #elif defined(HAVE_MMAP)
+        munmap(memory, string->as.mapped.length);
+        #else
+        free(memory);
+        #endif
     }
 }
 
-YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_t *result) {
+bool
+yp_string_mapped_init(yp_string_t *string, const char *filepath) {
 #ifdef _WIN32
     // Open the file for reading.
     HANDLE file = CreateFile(filepath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -119,7 +140,7 @@ YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_
     // the source to a constant empty string and return.
     if (file_size == 0) {
         CloseHandle(file);
-        yp_string_constant_init(result, "", 0);
+        yp_string_mapped_init_internal(string, "", 0);
         return true;
     }
 
@@ -141,7 +162,7 @@ YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_
         return false;
     }
 
-    yp_string_owned_init(result, source, (size_t) file_size);
+    yp_string_mapped_init_internal(string, source, (size_t) file_size);
     return true;
 #else
     // Open the file for reading
@@ -165,7 +186,7 @@ YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_
 
     if (size == 0) {
         close(fd);
-        yp_string_constant_init(result, "", 0);
+        yp_string_mapped_init_internal(string, "", 0);
         return true;
     }
 
@@ -190,23 +211,7 @@ YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_
 #endif
 
     close(fd);
-    yp_string_owned_init(result, source, size);
+    yp_string_mapped_init_internal(string, source, size);
     return true;
 #endif
 }
-
-YP_EXPORTED_FUNCTION void yp_unload_file_contents(yp_string_t *result) {
-    if (result->type != YP_STRING_OWNED) {
-        return;
-    }
-    void *memory = (void *) yp_string_source(result);
-
-#if defined(_WIN32)
-    UnmapViewOfFile(memory);
-#elif defined(HAVE_MMAP)
-    munmap(memory, yp_string_length(result));
-#else
-    free(memory);
-#endif
-}
-

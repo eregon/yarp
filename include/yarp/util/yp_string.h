@@ -10,7 +10,7 @@
 
 // This struct represents a string value.
 typedef struct {
-    enum { YP_STRING_SHARED, YP_STRING_OWNED, YP_STRING_CONSTANT } type;
+    enum { YP_STRING_SHARED, YP_STRING_OWNED, YP_STRING_CONSTANT, YP_STRING_MAPPED } type;
 
     union {
         struct {
@@ -27,6 +27,11 @@ typedef struct {
             const char *source;
             size_t length;
         } constant;
+
+        struct {
+            char *source;
+            size_t length;
+        } mapped;
     } as;
 } yp_string_t;
 
@@ -38,6 +43,17 @@ void yp_string_owned_init(yp_string_t *string, char *source, size_t length);
 
 // Initialize a constant string that doesn't own its memory source.
 void yp_string_constant_init(yp_string_t *string, const char *source, size_t length);
+
+// Read the file indicated by the filepath parameter into source and load its
+// contents and size into the given yp_string_t.
+// The given yp_string_t should be freed using yp_string_free() when it is no longer used.
+//
+// We want to use demand paging as much as possible in order to avoid having to
+// read the entire file into memory (which could be detrimental to performance
+// for large files). This means that if we're on windows we'll use
+// `MapViewOfFile`, on POSIX systems that have access to `mmap` we'll use
+// `mmap`, and on other POSIX systems we'll use `read`.
+bool yp_string_mapped_init(yp_string_t *string, const char *filepath);
 
 // Returns the memory size associated with the string.
 size_t yp_string_memsize(const yp_string_t *string);
@@ -54,22 +70,5 @@ YP_EXPORTED_FUNCTION const char * yp_string_source(const yp_string_t *string);
 
 // Free the associated memory of the given string.
 YP_EXPORTED_FUNCTION void yp_string_free(yp_string_t *string);
-
-// Read the file indicated by the filepath parameter into source and load its
-// contents and size into the given yp_string_t.
-// IMPORTANT NOTE:
-//   The given yp_string_t must be freed using yp_unload_file_contents() and NOT yp_string_free()!
-//
-// We want to use demand paging as much as possible in order to avoid having to
-// read the entire file into memory (which could be detrimental to performance
-// for large files). This means that if we're on windows we'll use
-// `MapViewOfFile`, on POSIX systems that have access to `mmap` we'll use
-// `mmap`, and on other POSIX systems we'll use `read`.
-YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_t *result);
-
-// Free any resources associated with the given yp_string_t. This is the corollary
-// function to yp_load_file_contents(). It will unmap the file if it was mapped, or
-// free the memory if it was allocated.
-YP_EXPORTED_FUNCTION void yp_unload_file_contents(yp_string_t *result);
 
 #endif // YARP_STRING_H

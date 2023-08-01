@@ -36,11 +36,6 @@ check_filepath(VALUE filepath) {
     return StringValueCStr(filepath);
 }
 
-static bool
-input_load_filepath(yp_string_t *input, const char *filepath) {
-    return yp_load_file_contents(filepath, input);
-}
-
 // Load the contents and size of the given string into the given yp_string_t.
 static void
 input_load_string(yp_string_t *input, VALUE string) {
@@ -50,11 +45,6 @@ input_load_string(yp_string_t *input, VALUE string) {
     }
 
     yp_string_constant_init(input, RSTRING_PTR(string), RSTRING_LEN(string));
-}
-
-static void
-input_unload_filepath(yp_string_t *input) {
-    yp_unload_file_contents(input);
 }
 
 /******************************************************************************/
@@ -101,10 +91,10 @@ dump_file(VALUE self, VALUE filepath) {
     yp_string_t input;
 
     const char *checked = check_filepath(filepath);
-    if (!input_load_filepath(&input, checked)) return Qnil;
+    if (!yp_string_mapped_init(&input, checked)) return Qnil;
 
     VALUE value = dump_input(&input, checked);
-    input_unload_filepath(&input);
+    yp_string_free(&input);
 
     return value;
 }
@@ -299,10 +289,10 @@ lex_file(VALUE self, VALUE filepath) {
     yp_string_t input;
 
     const char *checked = check_filepath(filepath);
-    if (!input_load_filepath(&input, checked)) return Qnil;
+    if (!yp_string_mapped_init(&input, checked)) return Qnil;
 
     VALUE value = lex_input(&input, checked);
-    input_unload_filepath(&input);
+    yp_string_free(&input);
 
     return value;
 }
@@ -369,10 +359,10 @@ parse_file(VALUE self, VALUE filepath) {
     yp_string_t input;
 
     const char *checked = check_filepath(filepath);
-    if (!input_load_filepath(&input, checked)) return Qnil;
+    if (!yp_string_mapped_init(&input, checked)) return Qnil;
 
     VALUE value = parse_input(&input, checked);
-    input_unload_filepath(&input);
+    yp_string_free(&input);
 
     return value;
 }
@@ -468,7 +458,7 @@ profile_file(VALUE self, VALUE filepath) {
     yp_string_t input;
 
     const char *checked = check_filepath(filepath);
-    if (!input_load_filepath(&input, checked)) return Qnil;
+    if (!yp_string_mapped_init(&input, checked)) return Qnil;
 
     yp_parser_t parser;
     yp_parser_init(&parser, yp_string_source(&input), yp_string_length(&input), checked);
