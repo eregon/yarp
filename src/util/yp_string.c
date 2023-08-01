@@ -163,13 +163,13 @@ YP_EXPORTED_FUNCTION bool yp_load_file_contents(const char *filepath, yp_string_
     size_t size = (size_t) sb.st_size;
     char *source = NULL;
 
-#ifdef HAVE_MMAP
     if (size == 0) {
         close(fd);
         yp_string_constant_init(result, "", 0);
         return true;
     }
 
+#ifdef HAVE_MMAP
     source = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (source == MAP_FAILED) {
         perror("Map failed");
