@@ -64,7 +64,7 @@ dump_input(yp_string_t *input, const char *filepath) {
     yp_parser_init(&parser, yp_string_source(input), yp_string_length(input), filepath);
 
     yp_node_t *node = yp_parse(&parser);
-    yp_serialize(&parser, node, &buffer);
+    yp_serialize(&parser, node, &buffer, true);
 
     VALUE result = rb_str_new(yp_buffer_value(&buffer), yp_buffer_length(&buffer));
     yp_node_destroy(&parser, node);
@@ -550,7 +550,7 @@ parse_serialize_file_metadata(VALUE self, VALUE filepath, VALUE metadata) {
     const char *checked = check_string(filepath);
     if (!yp_string_mapped_init(&input, checked)) return Qnil;
 
-    yp_parse_serialize(yp_string_source(&input), yp_string_length(&input), &buffer, check_string(metadata));
+    yp_parse_serialize(yp_string_source(&input), yp_string_length(&input), &buffer, check_string(metadata), true);
     VALUE result = rb_str_new(yp_buffer_value(&buffer), yp_buffer_length(&buffer));
 
     yp_string_free(&input);

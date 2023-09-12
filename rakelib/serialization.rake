@@ -1,39 +1,24 @@
 # frozen_string_literal: true
 
-fixtures = File.expand_path("../test/yarp/fixtures", __dir__)
-serialized_dir = File.expand_path("../serialized", fixtures)
+task "test:java_loader" do
+  fixtures = File.expand_path("../test/yarp/fixtures", __dir__)
 
-desc "Serialize test fixtures and save it to .serialized files"
-task "test:serialize_fixtures" do
   $:.unshift(File.expand_path("../lib", __dir__))
   require "yarp"
+  raise "this task requires the FFI backend" unless YARP::BACKEND == :FFI
   require "fileutils"
-
-  Dir["**/*.txt", base: fixtures].each do |relative|
-    path = "#{fixtures}/#{relative}"
-    serialized_path = "#{serialized_dir}/#{relative}"
-
-    serialized = YARP.dump_file(path)
-    FileUtils.mkdir_p(File.dirname(serialized_path))
-    File.write(serialized_path, serialized)
-  end
-end
-
-task "test:java_loader" do
   require 'java'
   require_relative '../tmp/yarp.jar'
   java_import 'org.yarp.Nodes$Source'
 
   Dir["**/*.txt", base: fixtures].each do |relative|
     path = "#{fixtures}/#{relative}"
-    serialized_path = "#{serialized_dir}/#{relative}"
-    serialized = File.binread(serialized_path).unpack('c*')
-
     puts
     puts path
+    serialized = YARP.const_get(:Debug).dump_file_no_location_fields(path)
     source_bytes = File.binread(path).unpack('c*')
     source = Source.new(source_bytes.to_java(:byte))
-    parse_result = org.yarp.Loader.load(serialized, source)
+    parse_result = org.yarp.Loader.load(serialized.unpack('c*'), source)
     puts parse_result.value
   end
 end

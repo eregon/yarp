@@ -62,6 +62,7 @@ The header is structured like the following table:
 | `1` | major version number |
 | `1` | minor version number |
 | `1` | patch version number |
+| `1` | whether the location fields of nodes are included |
 | string | the encoding name |
 | varint | number of comments |
 | comment* | comments |

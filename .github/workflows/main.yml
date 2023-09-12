@@ -116,13 +116,6 @@ jobs:
       JRUBY_OPTS: "--dev"
     steps:
     - uses: actions/checkout@v3
-    - name: Set up CRuby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 3.2
-        bundler-cache: true
-    - name: Serialize fixtures on CRuby
-      run: bundle exec rake compile test:serialize_fixtures
     - name: Set up JRuby
       uses: ruby/setup-ruby@v1
       with:

@@ -14203,26 +14203,27 @@ yp_parse(yp_parser_t *parser) {
 }
 
 YP_EXPORTED_FUNCTION void
-yp_serialize(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer) {
+yp_serialize(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer, bool include_location_fields) {
     yp_buffer_append_str(buffer, "YARP", 4);
     yp_buffer_append_u8(buffer, YP_VERSION_MAJOR);
     yp_buffer_append_u8(buffer, YP_VERSION_MINOR);
     yp_buffer_append_u8(buffer, YP_VERSION_PATCH);
+    yp_buffer_append_u8(buffer, include_location_fields ? 1 : 0);
 
-    yp_serialize_content(parser, node, buffer);
+    yp_serialize_content(parser, node, buffer, include_location_fields);
     yp_buffer_append_str(buffer, "\0", 1);
 }
 
 // Parse and serialize the AST represented by the given source to the given
 // buffer.
 YP_EXPORTED_FUNCTION void
-yp_parse_serialize(const uint8_t *source, size_t size, yp_buffer_t *buffer, const char *metadata) {
+yp_parse_serialize(const uint8_t *source, size_t size, yp_buffer_t *buffer, const char *metadata, bool include_location_fields) {
     yp_parser_t parser;
     yp_parser_init(&parser, source, size, NULL);
     if (metadata) yp_parser_metadata(&parser, metadata);
 
     yp_node_t *node = yp_parse(&parser);
-    yp_serialize(&parser, node, buffer);
+    yp_serialize(&parser, node, buffer, include_location_fields);
 
     yp_node_destroy(&parser, node);
     yp_parser_free(&parser);

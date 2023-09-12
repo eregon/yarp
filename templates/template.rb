@@ -192,6 +192,10 @@ module YARP
       @comment = config.fetch("comment")
     end
 
+    def semantic_fields
+      @semantic_fields ||= @fields.reject { |field| LocationField === field || OptionalLocationField === field }
+    end
+
     # Should emit serialized length of node so implementations can skip
     # the node to enable lazy parsing.
     def needs_serialized_length?

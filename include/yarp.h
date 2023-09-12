@@ -28,7 +28,7 @@
 #include <strings.h>
 #endif
 
-void yp_serialize_content(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer);
+void yp_serialize_content(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer, bool include_location_fields);
 
 void yp_print_node(yp_parser_t *parser, yp_node_t *node);
 
@@ -64,17 +64,17 @@ YP_EXPORTED_FUNCTION yp_node_t * yp_parse(yp_parser_t *parser);
 YP_EXPORTED_FUNCTION void yp_prettyprint(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer);
 
 // Serialize the AST represented by the given node to the given buffer.
-YP_EXPORTED_FUNCTION void yp_serialize(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer);
+YP_EXPORTED_FUNCTION void yp_serialize(yp_parser_t *parser, yp_node_t *node, yp_buffer_t *buffer, bool include_location_fields);
 
 // Parse the given source to the AST and serialize the AST to the given buffer.
-YP_EXPORTED_FUNCTION void yp_parse_serialize(const uint8_t *source, size_t size, yp_buffer_t *buffer, const char *metadata);
+YP_EXPORTED_FUNCTION void yp_parse_serialize(const uint8_t *source, size_t size, yp_buffer_t *buffer, const char *metadata, bool include_location_fields);
 
 // Lex the given source and serialize to the given buffer.
 YP_EXPORTED_FUNCTION void yp_lex_serialize(const uint8_t *source, size_t size, const char *filepath, yp_buffer_t *buffer);
 
 // Parse and serialize both the AST and the tokens represented by the given
 // source to the given buffer.
-YP_EXPORTED_FUNCTION void yp_parse_lex_serialize(const uint8_t *source, size_t size, yp_buffer_t *buffer, const char *metadata);
+YP_EXPORTED_FUNCTION void yp_parse_lex_serialize(const uint8_t *source, size_t size, yp_buffer_t *buffer, const char *metadata, bool include_location_fields);
 
 // Returns a string representation of the given token type.
 YP_EXPORTED_FUNCTION const char * yp_token_type_to_str(yp_token_type_t token_type);
