@@ -15,6 +15,10 @@ module YARP
     def initialize(name:, type:, **options)
       @name, @type, @options = name, type, options
     end
+
+    def semantic_field?
+      true
+    end
   end
 
   # Some node fields can be specialized if they point to a specific kind of
@@ -122,6 +126,10 @@ module YARP
 
   # This represents a field on a node that is a location.
   class LocationField < Field
+    def semantic_field?
+      options[:semantic_field] || false
+    end
+
     def rbs_class
       "Location"
     end
@@ -133,6 +141,10 @@ module YARP
 
   # This represents a field on a node that is a location that is optional.
   class OptionalLocationField < Field
+    def semantic_field?
+      options[:semantic_field] || false
+    end
+
     def rbs_class
       "Location?"
     end
@@ -193,7 +205,7 @@ module YARP
     end
 
     def semantic_fields
-      @semantic_fields ||= @fields.reject { |field| LocationField === field || OptionalLocationField === field }
+      @semantic_fields ||= @fields.select(&:semantic_field?)
     end
 
     # Should emit serialized length of node so implementations can skip

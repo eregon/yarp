@@ -225,6 +225,14 @@ public class Loader {
         return new Nodes.Location(loadVarInt(), loadVarInt());
     }
 
+    private Nodes.Location loadOptionalLocation() {
+        if (buffer.get() != 0) {
+            return loadLocation();
+        } else {
+            return null;
+        }
+    }
+
     // From https://github.com/protocolbuffers/protobuf/blob/v23.1/java/core/src/main/java/com/google/protobuf/BinaryReader.java#L1507
     private int loadVarInt() {
         int x;
@@ -268,6 +276,8 @@ public class Loader {
               when YARP::ConstantField then "loadConstant()"
               when YARP::OptionalConstantField then "loadOptionalConstant()"
               when YARP::ConstantListField then "loadConstants()"
+              when YARP::LocationField then "loadLocation()"
+              when YARP::OptionalLocationField then "loadOptionalLocation()"
               when YARP::UInt32Field then "loadVarInt()"
               when YARP::FlagsField then "loadFlags()"
               else raise
