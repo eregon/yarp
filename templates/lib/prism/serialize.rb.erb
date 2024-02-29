@@ -1,5 +1,3 @@
-require "stringio"
-
 # Polyfill for String#unpack1 with the offset parameter.
 if String.instance_method(:unpack1).parameters.none? { |_, name| name == :offset }
   String.prepend(
@@ -44,7 +42,7 @@ module Prism
     end
 
     class Loader # :nodoc:
-      attr_reader :encoding, :input, :serialized, :io
+      attr_reader :encoding, :input, :serialized
       attr_reader :constant_pool_offset, :constant_pool, :source
       attr_reader :start_line
 
@@ -52,9 +50,9 @@ module Prism
         @encoding = Encoding::UTF_8
 
         @input = source.source.dup
+        raise unless serialized.encoding == Encoding::BINARY
         @serialized = serialized
-        @io = StringIO.new(serialized)
-        @io.set_encoding(Encoding::BINARY)
+        @pos = 0
 
         @constant_pool_offset = nil
         @constant_pool = nil
@@ -64,16 +62,16 @@ module Prism
       end
 
       def load_header
-        raise "Invalid serialization" if io.read(5) != "PRISM"
-        raise "Invalid serialization" if io.read(3).unpack("C3") != [MAJOR_VERSION, MINOR_VERSION, PATCH_VERSION]
-        only_semantic_fields = io.read(1).unpack1("C")
+        raise "Invalid serialization" if read(5) != "PRISM"
+        raise "Invalid serialization" if [getbyte, getbyte, getbyte] != [MAJOR_VERSION, MINOR_VERSION, PATCH_VERSION]
+        only_semantic_fields = getbyte
         unless only_semantic_fields == 0
           raise "Invalid serialization (location fields must be included but are not)"
         end
       end
 
       def load_encoding
-        @encoding = Encoding.find(io.read(load_varuint))
+        @encoding = Encoding.find(read(load_varuint))
         @input = input.force_encoding(@encoding).freeze
         @encoding
       end
@@ -125,7 +123,7 @@ module Prism
         comments, magic_comments, data_loc, errors, warnings = load_metadata
         tokens.each { |token,| token.value.force_encoding(encoding) }
 
-        raise "Expected to consume all bytes while deserializing" unless @io.eof?
+        raise "Expected to consume all bytes while deserializing" unless eof?
         Prism::ParseResult.new(tokens, comments, magic_comments, data_loc, errors, warnings, @source)
       end
 
@@ -137,7 +135,7 @@ module Prism
 
         comments, magic_comments, data_loc, errors, warnings = load_metadata
 
-        @constant_pool_offset = io.read(4).unpack1("L")
+        @constant_pool_offset = load_uint32
         @constant_pool = Array.new(load_varuint, nil)
 
         [load_node, comments, magic_comments, data_loc, errors, warnings]
@@ -150,16 +148,32 @@ module Prism
 
       private
 
+      def getbyte
+        byte = @serialized.getbyte(@pos)
+        @pos += 1
+        byte
+      end
+
+      def read(n)
+        slice = @serialized.byteslice(@pos, n)
+        @pos += n
+        slice
+      end
+
+      def eof?
+        @pos >= @serialized.bytesize
+      end
+
       # variable-length integer using https://en.wikipedia.org/wiki/LEB128
       # This is also what protobuf uses: https://protobuf.dev/programming-guides/encoding/#varints
       def load_varuint
-        n = io.getbyte
+        n = getbyte
         if n < 128
           n
         else
           n -= 128
           shift = 0
-          while (b = io.getbyte) >= 128
+          while (b = getbyte) >= 128
             n += (b - 128) << (shift += 7)
           end
           n + (b << (shift + 7))
@@ -172,7 +186,7 @@ module Prism
       end
 
       def load_integer
-        negative = io.getbyte != 0
+        negative = getbyte != 0
         length = load_varuint
 
         value = 0
@@ -183,26 +197,30 @@ module Prism
       end
 
       def load_double
-        io.read(8).unpack1("D")
+        value = @serialized.unpack1("D", offset: @pos)
+        @pos += 8
+        value
       end
 
-      def load_serialized_length
-        io.read(4).unpack1("L")
+      def load_uint32
+        value = @serialized.unpack1("L", offset: @pos)
+        @pos += 4
+        value
       end
 
       def load_optional_node
-        if io.getbyte != 0
-          io.pos -= 1
+        if getbyte != 0
+          @pos -= 1
           load_node
         end
       end
 
       def load_embedded_string
-        io.read(load_varuint).force_encoding(encoding)
+        read(load_varuint).force_encoding(encoding)
       end
 
       def load_string
-        type = io.getbyte
+        type = getbyte
         case type
         when 1
           input.byteslice(load_varuint, load_varuint).force_encoding(encoding)
@@ -222,11 +240,11 @@ module Prism
       end
 
       def load_optional_location
-        load_location if io.getbyte != 0
+        load_location if getbyte != 0
       end
 
       def load_optional_location_object
-        load_location_object if io.getbyte != 0
+        load_location_object if getbyte != 0
       end
 
       def load_constant(index)
@@ -234,14 +252,14 @@ module Prism
 
         unless constant
           offset = constant_pool_offset + index * 8
-          start = serialized.unpack1("L", offset: offset)
-          length = serialized.unpack1("L", offset: offset + 4)
+          start = @serialized.unpack1("L", offset: offset)
+          length = @serialized.unpack1("L", offset: offset + 4)
 
           constant =
             if start.nobits?(1 << 31)
               input.byteslice(start, length).force_encoding(@encoding).to_sym
             else
-              serialized.byteslice(start & ((1 << 31) - 1), length).force_encoding(@encoding).to_sym
+              @serialized.byteslice(start & ((1 << 31) - 1), length).force_encoding(@encoding).to_sym
             end
 
           constant_pool[index] = constant
@@ -260,7 +278,7 @@ module Prism
       end
 
       def load_error_level
-        level = io.getbyte
+        level = getbyte
 
         case level
         when 0
@@ -273,7 +291,7 @@ module Prism
       end
 
       def load_warning_level
-        level = io.getbyte
+        level = getbyte
 
         case level
         when 0
@@ -287,14 +305,14 @@ module Prism
 
       if RUBY_ENGINE == 'ruby'
         def load_node
-          type = io.getbyte
+          type = getbyte
           location = load_location
 
           case type
           <%- nodes.each_with_index do |node, index| -%>
           when <%= index + 1 %> then
             <%- if node.needs_serialized_length? -%>
-            load_serialized_length
+            load_uint32
             <%- end -%>
             <%= node.name %>.new(
               source, <%= (node.fields.map { |field|
@@ -308,7 +326,7 @@ module Prism
               when Prism::ConstantListField then "Array.new(load_varuint) { load_required_constant }"
               when Prism::LocationField then "load_location"
               when Prism::OptionalLocationField then "load_optional_location"
-              when Prism::UInt8Field then "io.getbyte"
+              when Prism::UInt8Field then "getbyte"
               when Prism::UInt32Field, Prism::FlagsField then "load_varuint"
               when Prism::IntegerField then "load_integer"
               when Prism::DoubleField then "load_double"
@@ -320,7 +338,7 @@ module Prism
         end
       else
         def load_node
-          type = io.getbyte
+          type = getbyte
           @load_node_lambdas[type].call
         end
 
@@ -331,7 +349,7 @@ module Prism
             -> {
               location = load_location
               <%- if node.needs_serialized_length? -%>
-              load_serialized_length
+              load_uint32
               <%- end -%>
               <%= node.name %>.new(
                 source, <%= (node.fields.map { |field|
@@ -345,7 +363,7 @@ module Prism
                 when Prism::ConstantListField then "Array.new(load_varuint) { load_required_constant }"
                 when Prism::LocationField then "load_location"
                 when Prism::OptionalLocationField then "load_optional_location"
-                when Prism::UInt8Field then "io.getbyte"
+                when Prism::UInt8Field then "getbyte"
                 when Prism::UInt32Field, Prism::FlagsField then "load_varuint"
                 when Prism::IntegerField then "load_integer"
                 when Prism::DoubleField then "load_double"
