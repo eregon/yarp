@@ -919,6 +919,9 @@ nodes:
     fields:
       - name: constant
         type: node?
+      # TODO requireds seems not symmetric with posts, maybe it could be pre/rest/post?
+      # Also posts are also required, so requireds seems not a great name.
+      # Somewhat related: https://github.com/ruby/prism/issues/1600
       - name: requireds
         type: node[]
       - name: rest
@@ -2187,6 +2190,7 @@ nodes:
                 baz
                 ^^^
               end
+      # TODO: else_clause ?
       - name: subsequent
         type: node?
         kind:
