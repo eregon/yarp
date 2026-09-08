@@ -8,6 +8,7 @@ return if !defined?(RubyVM::InstructionSequence) || RUBY_VERSION < "3.4.0"
 
 module Prism
   class NewlineTest < TestCase
+    # Do not add skips here, every change is a regression in TracePoint :line events
     base = __dir__
     Dir["{,api/,encoding/,result/,ruby/}*.rb", base: base].each do |relative|
       define_method(:"test_#{relative}") do
