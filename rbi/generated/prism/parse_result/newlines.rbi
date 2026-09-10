@@ -83,6 +83,13 @@ module Prism
       # Permit statements lists to mark newlines within themselves.
       sig { params(node: StatementsNode).void }
       def visit_statements_node(node); end
+
+      # Walk the tail (value) positions of a method body and record any bare
+      # nil found there, recursing through the branches of conditionals that
+      # are themselves in tail position. These are the method's implicit nil
+      # return, which does not emit a newline event.
+      sig { params(node: ::T.nilable(Node)).void }
+      private def suppress_tail_nils(node); end
     end
   end
 

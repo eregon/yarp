@@ -98,6 +98,16 @@ module Prism
       #
       # : (StatementsNode node) -> void
       def visit_statements_node: (StatementsNode node) -> void
+
+      private
+
+      # Walk the tail (value) positions of a method body and record any bare
+      # nil found there, recursing through the branches of conditionals that
+      # are themselves in tail position. These are the method's implicit nil
+      # return, which does not emit a newline event.
+      #
+      # : (Prism::node? node) -> void
+      def suppress_tail_nils: (Prism::node? node) -> void
     end
   end
 

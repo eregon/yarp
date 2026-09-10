@@ -35,6 +35,7 @@ module Prism
       #: (Integer lines) -> void
       def initialize(lines)
         @lines = Array.new(1 + lines, false)
+        @suppressed = nil
       end
 
       # Permit block nodes to mark newlines within themselves.
@@ -75,10 +76,18 @@ module Prism
         old_lines = @lines
         @lines = Array.new(old_lines.size, !node.equal_loc.nil?)
 
+        # A bare `nil` in the method's tail (value) position is the implicit
+        # `nil` return, which does not emit a newline event. Collect those nil
+        # nodes so they can be skipped while visiting the body.
+        old_suppressed = @suppressed
+        @suppressed = {} #: Hash[Integer, bool]
+        suppress_tail_nils(node.body)
+
         begin
           super(node)
         ensure
           @lines = old_lines
+          @suppressed = old_suppressed
         end
       end
 
@@ -197,9 +206,42 @@ module Prism
       #: (StatementsNode node) -> void
       def visit_statements_node(node)
         node.body.each do |child|
+          next if @suppressed&.include?(child.node_id) && child.is_a?(NilNode)
           child.newline_flag!(@lines)
         end
         super(node)
+      end
+
+      private
+
+      # Walk the tail (value) positions of a method body and record any bare
+      # nil found there, recursing through the branches of conditionals that
+      # are themselves in tail position. These are the method's implicit nil
+      # return, which does not emit a newline event.
+      #
+      #: (Prism::node? node) -> void
+      def suppress_tail_nils(node)
+        case node
+        when NilNode
+          @suppressed[node.node_id] = true
+        when StatementsNode
+          suppress_tail_nils(node.body.last)
+        when ParenthesesNode
+          suppress_tail_nils(node.body)
+        when IfNode
+          suppress_tail_nils(node.statements)
+          suppress_tail_nils(node.subsequent)
+        when UnlessNode
+          suppress_tail_nils(node.statements)
+          suppress_tail_nils(node.else_clause)
+        when ElseNode
+          suppress_tail_nils(node.statements)
+        when CaseNode
+          node.conditions.each do |condition|
+            suppress_tail_nils(condition.statements) if condition.is_a?(WhenNode)
+          end
+          suppress_tail_nils(node.else_clause)
+        end
       end
     end
   end
